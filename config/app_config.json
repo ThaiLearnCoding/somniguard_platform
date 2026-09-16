@@ -1,0 +1,18 @@
+{
+  "_comment": "Edit this file for your local setup. See README.md for the full explanation of each field.",
+  "models_current_dir": "models/current",
+  "models_history_dir": "models/history",
+  "models_staging_dir": "models/staging",
+  "_models_staging_dir_comment": "Scratch slot for a fine-tuned candidate awaiting the doctor's approve/discard decision. Cleared and rewritten on every /api/train call -- never accumulates.",
+  "db_path": "data/somniguard.db",
+  "gbl_pipeline_script_path": null,
+  "_gbl_pipeline_script_path_comment": "Point this at the REAL build_gbl_pipeline.py inside your actual Simplicity Studio firmware project (it must stay next to its sibling config/tflite, cmake_gcc/build, autogen dirs). Only works when this app runs on the Windows machine with the Silicon Labs SDK + Simplicity Commander installed. Leave null to use the mock fallback everywhere else.",
+  "ppg_sample_rate_hz": 50,
+  "training_defaults": {
+    "learning_rate": 1e-05,
+    "epochs": 200,
+    "batch_size": 32,
+    "early_stopping_patience": 15
+  },
+  "backend_base_url": "http://127.0.0.1:8000"
+}

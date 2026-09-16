@@ -1,0 +1,153 @@
+{
+  "data": {
+    "npz_path": "somniguard_train_dataset.npz",
+    "data_key": "X",
+    "label_key": "Y",
+    "test_fraction": 0.2,
+    "seed": 42
+  },
+  "channels": {
+    "total_channels": 28,
+    "spo2_idx": 0,
+    "bpm_idx": 1,
+    "ir_start_idx": 2,
+    "ir_end_idx": 27,
+    "motion_idx": 27,
+    "frame_samples": 25,
+    "window_frames": 60
+  },
+  "label": {
+    "num_classes": 3,
+    "class_names": [
+      "Normal",
+      "Abnormal",
+      "Emergency"
+    ],
+    "class_values": [
+      0,
+      1,
+      2
+    ],
+    "training_target": {
+      "type": "soft_ordinal_regression",
+      "class_targets": [
+        0.0,
+        0.7,
+        1.0
+      ],
+      "loss": "mse",
+      "description": "The Dense(1, sigmoid) output is trained with MSE regression against a fixed target value per class: class_targets[label] (0.0 for Normal, 0.7 for Abnormal, 1.0 for Emergency). Spacing Abnormal's target below the midpoint reserves more of the [0,1] range for Emergency, so tau_2 has real separation to be tuned in rather than sitting against the sigmoid's saturation ceiling. The resulting score is still treated purely as a continuous severity score post-training -- the 3-way class decision is produced afterward by thresholding this score at tau_1/tau_2, not directly by the training targets."
+    }
+  },
+  "compression": {
+    "name": "stat7",
+    "features": [
+      "mean",
+      "std",
+      "min",
+      "max",
+      "rms",
+      "skew",
+      "kurtosis"
+    ]
+  },
+  "model_variant": {
+    "conv_filters": [
+      16,
+      32,
+      32
+    ],
+    "kernel_sizes": [
+      5,
+      5,
+      3
+    ],
+    "strides": [
+      1,
+      1,
+      1
+    ],
+    "pool_after_layer": [
+      true,
+      true,
+      false
+    ],
+    "dense_units": [
+      32
+    ],
+    "dropout": 0.3
+  },
+  "training": {
+    "epochs": 30,
+    "batch_size": 32,
+    "validation_split": 0.1
+  },
+  "normalization": {
+    "mean": [
+      -9.08638412511209e-06,
+      0.0030737612396478653,
+      -0.00475749047473073,
+      0.004848856944590807,
+      0.004867485724389553,
+      0.05842871591448784,
+      -0.7696008682250977,
+      94.3064193725586,
+      83.89511108398438,
+      0.0058854068629443645
+    ],
+    "std": [
+      0.004771340172737837,
+      0.0023004955146461725,
+      0.005945245269685984,
+      0.005335461813956499,
+      0.003716951236128807,
+      0.6678735017776489,
+      1.0906718969345093,
+      5.015106678009033,
+      19.705257415771484,
+      0.009256711229681969
+    ],
+    "channel_order": [
+      "mean",
+      "std",
+      "min",
+      "max",
+      "rms",
+      "skew",
+      "kurtosis",
+      "spo2",
+      "bpm",
+      "motion_level"
+    ]
+  },
+  "input_quantization": {
+    "scale": 0.04723702371120453,
+    "zero_point": -41
+  },
+  "output_quantization": {
+    "scale": 0.00390625,
+    "zero_point": -128
+  },
+  "thresholds": {
+    "tau_1": 0.6963933497667313,
+    "tau_2": 0.8082715719938278,
+    "tuned_for_metric": "f1_macro",
+    "score_domain": "float sigmoid output in [0, 1], AFTER dequantizing the int8 model output",
+    "decision_rule": "score < tau_1 -> Normal (0); tau_1 <= score < tau_2 -> Abnormal (1); score >= tau_2 -> Emergency (2)"
+  },
+  "threshold_tuning": {
+    "tuning_fraction": 0.15,
+    "seed": 42,
+    "metric": "f1_macro",
+    "n_candidates": 200,
+    "constraint": "0 <= tau_1 <= tau_2 <= 1",
+    "description": "tau_1/tau_2 are grid-searched on a held-out tuning split (carved from the training data, never seen by the optimizer or by the test set) to maximize macro-F1 over the 3 true ordinal classes. score < tau_1 -> Normal, tau_1 <= score < tau_2 -> Abnormal, score >= tau_2 -> Emergency."
+  },
+  "fine_tuning": {
+    "parent_dir": "models\\current",
+    "learning_rate": 1e-05,
+    "epochs_run": 200,
+    "batch_size": 32,
+    "trained_at_utc": "2026-09-16T02:57:09.127147Z"
+  }
+}
