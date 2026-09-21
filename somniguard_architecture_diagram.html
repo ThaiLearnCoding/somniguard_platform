@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SomniGuard architecture</title>
+<style>
+  :root{
+    --bg:#FAFAF7; --surface:#FFFFFF; --border:#DEDCD2; --text:#26251F; --text-muted:#726F64;
+    --edge:#9A978C; --edge-active:#26251F;
+    --coral:#D9754F; --coral-bg:#FBEDE6; --coral-dk:#7A3F26;
+    --teal:#1D9E75; --teal-bg:#E6F5EF; --teal-dk:#0E5B41;
+    --purple:#7F77DD; --purple-bg:#EFEDFB; --purple-dk:#453E9E;
+    --amber:#C98A1E; --amber-bg:#FBF0DC; --amber-dk:#7A5410;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#18181A; --surface:#232326; --border:#3A3A3D; --text:#ECEAE4; --text-muted:#A6A49B;
+      --edge:#6E6D68; --edge-active:#ECEAE4;
+      --coral-bg:#3A2A22; --coral-dk:#F0AF8E;
+      --teal-bg:#16302A; --teal-dk:#7ED9B9;
+      --purple-bg:#241F3D; --purple-dk:#C0BAF2;
+      --amber-bg:#3A2C12; --amber-dk:#EFC067;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 16px 32px}
+  h1{font-size:18px;font-weight:500;margin:0 0 4px}
+  .lede{font-size:13px;color:var(--text-muted);margin:0 0 16px}
+  svg{width:100%;height:auto;display:block;overflow:visible}
+  text{font-family:inherit}
+  .title{font-size:14px;font-weight:500;fill:var(--text)}
+  .subtitle{font-size:12px;fill:var(--text-muted)}
+  .pill-text{font-size:12px;font-weight:500}
+  .edge-label{font-size:12px;fill:var(--text-muted)}
+  .group-bg{stroke-width:1}
+  .card{fill:var(--surface);stroke:var(--border);stroke-width:1;transition:stroke .15s,filter .15s}
+  .edge{fill:none;stroke:var(--edge);stroke-width:1.3;transition:stroke .15s,stroke-width .15s,opacity .15s}
+  .edge.active{stroke:var(--edge-active);stroke-width:2}
+  .edge.dim{opacity:.18}
+  .node{cursor:pointer;outline:none}
+  .node.dim .card{opacity:.35}
+  .node.dim .icon,.node.dim .title,.node.dim .subtitle{opacity:.35}
+  .node.selected .card{stroke:var(--edge-active);stroke-width:2}
+  .node:focus-visible .card{stroke:var(--edge-active);stroke-width:2}
+  .icon-coral{color:var(--coral-dk)} .icon-teal{color:var(--teal-dk)}
+  .icon-purple{color:var(--purple-dk)} .icon-amber{color:var(--amber-dk)}
+  .icon-ext{color:var(--text-muted)}
+  .panel{margin-top:18px;padding:16px 18px;border:1px solid var(--border);border-radius:10px;background:var(--surface);min-height:20px}
+  .panel .name{font-size:13px;font-weight:500;margin:0 0 4px}
+  .panel .desc{font-size:13px;color:var(--text-muted);line-height:1.55;margin:0}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--text-muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:10px;height:10px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SomniGuard backend architecture</h1>
+  <p class="lede">Hover a component to trace its connections. Click one for details below.</p>
+
+  <svg viewBox="0 0 1180 800" role="group" aria-label="SomniGuard backend architecture diagram">
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+      <symbol id="icon-ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.1"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+      <symbol id="icon-device" viewBox="0 0 24 24"><rect x="3" y="2" width="18" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="18" x2="15" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+      <symbol id="icon-process" viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 12-4.9M19 12a7 7 0 0 1-12 4.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M17 4v4h-4M7 20v-4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="icon-storage" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+      <symbol id="icon-signal" viewBox="0 0 24 24"><path d="M2 12h4l2-7 4 14 3-9 2 5h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    </defs>
+
+    <!-- group backgrounds -->
+    <rect class="group-bg" x="140" y="140" width="400" height="160" rx="18" fill="var(--coral-bg)" stroke="var(--coral)"/>
+    <rect class="group-bg" x="580" y="140" width="450" height="260" rx="18" fill="var(--teal-bg)" stroke="var(--teal)"/>
+    <rect class="group-bg" x="140" y="460" width="560" height="160" rx="18" fill="var(--purple-bg)" stroke="var(--purple)"/>
+    <rect class="group-bg" x="760" y="460" width="380" height="160" rx="18" fill="var(--amber-bg)" stroke="var(--amber)"/>
+
+    <rect x="156" y="154" width="86" height="24" rx="12" fill="var(--coral)"/><text class="pill-text" x="199" y="166" text-anchor="middle" dominant-baseline="central" fill="#fff">Ingestion</text>
+    <rect x="596" y="154" width="90" height="24" rx="12" fill="var(--teal)"/><text class="pill-text" x="641" y="166" text-anchor="middle" dominant-baseline="central" fill="#fff">Data &amp; ML</text>
+    <rect x="156" y="474" width="126" height="24" rx="12" fill="var(--purple)"/><text class="pill-text" x="219" y="486" text-anchor="middle" dominant-baseline="central" fill="#fff">Model storage</text>
+    <rect x="776" y="474" width="102" height="24" rx="12" fill="var(--amber)"/><text class="pill-text" x="827" y="486" text-anchor="middle" dominant-baseline="central" fill="#fff">Deployment</text>
+
+    <!-- edges -->
+    <line class="edge" data-a="ring" data-b="mobile" x1="220" y1="68" x2="260" y2="68" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="240" y="58" text-anchor="middle">BLE</text>
+
+    <line class="edge" data-a="mobile" data-b="dsp" x1="340" y1="96" x2="340" y2="140" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="350" y="120">Wi-Fi, morning</text>
+
+    <line class="edge" data-a="upload" data-b="dsp" x1="330" y1="222" x2="360" y2="222" marker-end="url(#arrow)"/>
+
+    <line class="edge" data-a="dsp" data-b="db" x1="520" y1="222" x2="610" y2="222" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="565" y="212" text-anchor="middle">steps</text>
+
+    <line class="edge" data-a="db" data-b="liveinf" x1="790" y1="222" x2="820" y2="222" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+    <text class="edge-label" x="805" y="176" text-anchor="middle">predictions</text>
+
+    <line class="edge" data-a="db" data-b="finetune" x1="700" y1="254" x2="700" y2="280" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="715" y="270">corrected data</text>
+
+    <line class="edge" data-a="doctor" data-b="db" x1="1000" y1="96" x2="1000" y2="140" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+    <text class="edge-label" x="1013" y="120">review + correct</text>
+
+    <path class="edge" data-a="finetune" data-b="staging" d="M805 344 L805 420 L250 420 L250 460" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="527" y="410" text-anchor="middle">candidate model</text>
+
+    <line class="edge" data-a="staging" data-b="current" x1="330" y1="542" x2="360" y2="542" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="345" y="498" text-anchor="middle">approve</text>
+
+    <line class="edge" data-a="current" data-b="history" x1="520" y1="542" x2="550" y2="542" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="535" y="498" text-anchor="middle">archive</text>
+
+    <path class="edge" data-a="current" data-b="gblbridge" d="M520 542 L520 660 L870 660 L870 574" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="695" y="648" text-anchor="middle">approved .tflite</text>
+
+    <line class="edge" data-a="gblbridge" data-b="firmware" x1="950" y1="542" x2="980" y2="542" marker-end="url(#arrow)"/>
+
+    <line class="edge" data-a="firmware" data-b="watch" x1="1045" y1="574" x2="1045" y2="700" marker-end="url(#arrow)"/>
+    <text class="edge-label" x="1058" y="640">OTA</text>
+
+    <!-- nodes -->
+    <g class="node" data-id="ring" tabindex="0" role="button" aria-label="Smart ring">
+      <rect class="card" x="60" y="40" width="160" height="56" rx="10"/>
+      <use href="#icon-ring" class="icon-ext" x="76" y="58" width="20" height="20"/>
+      <text class="title" x="106" y="63">Smart ring</text>
+      <text class="subtitle" x="106" y="81">IR, Red, IMU</text>
+    </g>
+
+    <g class="node" data-id="mobile" tabindex="0" role="button" aria-label="Mobile app">
+      <rect class="card" x="260" y="40" width="160" height="56" rx="10"/>
+      <use href="#icon-device" class="icon-ext" x="276" y="58" width="20" height="20"/>
+      <text class="title" x="306" y="63">Mobile app</text>
+      <text class="subtitle" x="306" y="81">Buffers one night</text>
+    </g>
+
+    <g class="node" data-id="doctor" tabindex="0" role="button" aria-label="Doctor dashboard">
+      <rect class="card" x="900" y="40" width="200" height="56" rx="10"/>
+      <use href="#icon-device" class="icon-ext" x="916" y="58" width="20" height="20"/>
+      <text class="title" x="946" y="63">Doctor dashboard</text>
+      <text class="subtitle" x="946" y="81">Streamlit, day picker</text>
+    </g>
+
+    <g class="node" data-id="upload" tabindex="0" role="button" aria-label="Upload endpoint">
+      <rect class="card" x="170" y="190" width="160" height="64" rx="10"/>
+      <use href="#icon-process" class="icon-coral" x="184" y="212" width="20" height="20"/>
+      <text class="title" x="214" y="217">Upload endpoint</text>
+      <text class="subtitle" x="214" y="235">POST /api/upload</text>
+    </g>
+
+    <g class="node" data-id="dsp" tabindex="0" role="button" aria-label="DSP processing">
+      <rect class="card" x="360" y="190" width="160" height="64" rx="10"/>
+      <use href="#icon-process" class="icon-coral" x="374" y="212" width="20" height="20"/>
+      <text class="title" x="404" y="217">DSP processing</text>
+      <text class="subtitle" x="404" y="235">SpO2, BPM, motion</text>
+    </g>
+
+    <g class="node" data-id="db" tabindex="0" role="button" aria-label="SQLite database">
+      <rect class="card" x="610" y="190" width="180" height="64" rx="10"/>
+      <use href="#icon-storage" class="icon-teal" x="624" y="212" width="20" height="20"/>
+      <text class="title" x="654" y="217">SQLite database</text>
+      <text class="subtitle" x="654" y="235">nights, steps, versions</text>
+    </g>
+
+    <g class="node" data-id="liveinf" tabindex="0" role="button" aria-label="Live inference">
+      <rect class="card" x="820" y="190" width="180" height="64" rx="10"/>
+      <use href="#icon-signal" class="icon-teal" x="834" y="212" width="20" height="20"/>
+      <text class="title" x="864" y="217">Live inference</text>
+      <text class="subtitle" x="864" y="235">Active model, on read</text>
+    </g>
+
+    <g class="node" data-id="finetune" tabindex="0" role="button" aria-label="Fine-tune pipeline">
+      <rect class="card" x="610" y="280" width="390" height="64" rx="10"/>
+      <use href="#icon-process" class="icon-teal" x="624" y="302" width="20" height="20"/>
+      <text class="title" x="654" y="307">Fine-tune pipeline</text>
+      <text class="subtitle" x="654" y="325">Compress, regress, quantize</text>
+    </g>
+
+    <g class="node" data-id="staging" tabindex="0" role="button" aria-label="Staging">
+      <rect class="card" x="170" y="510" width="160" height="64" rx="10"/>
+      <use href="#icon-storage" class="icon-purple" x="184" y="532" width="20" height="20"/>
+      <text class="title" x="214" y="537">Staging</text>
+      <text class="subtitle" x="214" y="555">Candidate model</text>
+    </g>
+
+    <g class="node" data-id="current" tabindex="0" role="button" aria-label="Current">
+      <rect class="card" x="360" y="510" width="160" height="64" rx="10"/>
+      <use href="#icon-storage" class="icon-purple" x="374" y="532" width="20" height="20"/>
+      <text class="title" x="404" y="537">Current</text>
+      <text class="subtitle" x="404" y="555">Active model</text>
+    </g>
+
+    <g class="node" data-id="history" tabindex="0" role="button" aria-label="History">
+      <rect class="card" x="550" y="510" width="130" height="64" rx="10"/>
+      <use href="#icon-storage" class="icon-purple" x="562" y="532" width="20" height="20"/>
+      <text class="title" x="592" y="537">History</text>
+      <text class="subtitle" x="592" y="555">Past generations</text>
+    </g>
+
+    <g class="node" data-id="gblbridge" tabindex="0" role="button" aria-label="gbl bridge">
+      <rect class="card" x="790" y="510" width="160" height="64" rx="10"/>
+      <use href="#icon-process" class="icon-amber" x="804" y="532" width="20" height="20"/>
+      <text class="title" x="834" y="537">gbl_bridge</text>
+      <text class="subtitle" x="834" y="555">Real or mock build</text>
+    </g>
+
+    <g class="node" data-id="firmware" tabindex="0" role="button" aria-label="Firmware">
+      <rect class="card" x="980" y="510" width="130" height="64" rx="10"/>
+      <use href="#icon-storage" class="icon-amber" x="992" y="532" width="20" height="20"/>
+      <text class="title" x="1022" y="537">Firmware</text>
+      <text class="subtitle" x="1022" y="555">.gbl, OTA endpoint</text>
+    </g>
+
+    <g class="node" data-id="watch" tabindex="0" role="button" aria-label="Watch">
+      <rect class="card" x="965" y="700" width="160" height="56" rx="10"/>
+      <use href="#icon-device" class="icon-ext" x="981" y="718" width="20" height="20"/>
+      <text class="title" x="1011" y="723">Watch</text>
+      <text class="subtitle" x="1011" y="741">Runs int8 model</text>
+    </g>
+  </svg>
+
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--coral)"></span>Ingestion</span>
+    <span><span class="swatch" style="background:var(--teal)"></span>Data &amp; ML</span>
+    <span><span class="swatch" style="background:var(--purple)"></span>Model storage</span>
+    <span><span class="swatch" style="background:var(--amber)"></span>Deployment</span>
+  </div>
+
+  <div class="panel" id="panel">
+    <p class="desc" id="panel-desc">Click any component above for details.</p>
+  </div>
+</div>
+
+<script>
+  var info = {
+    ring: ["Smart ring", "Wears IR, Red, and IMU sensors; streams raw samples to the phone over BLE, roughly once per second."],
+    mobile: ["Mobile app", "Buffers an entire night's raw samples locally, then pushes the whole file to the cloud once it has Wi-Fi in the morning."],
+    doctor: ["Doctor dashboard", "Streamlit UI: pick a night, review predictions, drag-correct a time range, then fine-tune and compare before deploying. No upload button \u2014 the data's already there by the time the doctor opens it."],
+    upload: ["Upload endpoint", "FastAPI endpoint that receives the night's CSV, writes it to a temp file for processing, then deletes it \u2014 nothing raw is ever persisted to disk."],
+    dsp: ["DSP processing", "Runs the SomniGuardDSP and SomniGuardMotion algorithms per continuous segment to derive SpO2, BPM, and motion level at 2 Hz, splitting multi-night files by date along the way."],
+    db: ["SQLite database", "Tables for nights (RecordingSession), 0.5s feature steps, relabel events, and model version metadata \u2014 the only thing persisted from an upload."],
+    liveinf: ["Live inference", "Re-runs the active model's int8 .tflite over a night's steps every time its timeline is viewed, so displayed predictions always match whichever model is currently deployed."],
+    finetune: ["Fine-tune pipeline", "Compresses raw IR into statistical features, applies ordinal regression against the corrected labels, re-tunes the two severity thresholds, and quantizes the result back to int8."],
+    staging: ["Staging", "A single scratch slot holding one fine-tuned candidate at a time, awaiting the doctor's approve decision. Cleared and rewritten on every new training run."],
+    current: ["Current", "The single source of truth for what's deployed \u2014 every inference call reads directly from here. Never duplicated with staging or history."],
+    history: ["History", "A snapshot of a model taken at the exact moment it's replaced, so nothing approved is ever lost \u2014 including the very first model provided."],
+    gblbridge: ["gbl_bridge", "Wraps the real Silicon Labs build_gbl_pipeline.py when it's available on the host machine; otherwise writes a clearly-marked placeholder file."],
+    firmware: ["Firmware", "The compiled .gbl image, served from the same endpoint the Android app polls for OTA updates."],
+    watch: ["Watch", "Runs the deployed int8 model on-device to score every 30s window and trigger progressive haptic, audio, or call alerts."]
+  };
+
+  var nodes = Array.prototype.slice.call(document.querySelectorAll(".node"));
+  var edges = Array.prototype.slice.call(document.querySelectorAll(".edge"));
+  var nameEl, descEl = document.getElementById("panel-desc");
+
+  function related(id, otherId){
+    if (id === otherId) return true;
+    return edges.some(function(e){
+      var a = e.dataset.a, b = e.dataset.b;
+      return (a === id && b === otherId) || (b === id && a === otherId);
+    });
+  }
+
+  function setHover(id, on){
+    edges.forEach(function(e){
+      var involved = e.dataset.a === id || e.dataset.b === id;
+      e.classList.toggle("active", on && involved);
+      e.classList.toggle("dim", on && !involved);
+    });
+    nodes.forEach(function(n){
+      var nid = n.dataset.id;
+      n.classList.toggle("dim", on && !related(id, nid));
+    });
+  }
+
+  function selectNode(id){
+    nodes.forEach(function(n){ n.classList.toggle("selected", n.dataset.id === id); });
+    var entry = info[id];
+    if (entry) descEl.innerHTML = "<strong style=\"color:var(--text);font-weight:500\">" + entry[0] + "</strong> \u2014 " + entry[1];
+  }
+
+  nodes.forEach(function(n){
+    var id = n.dataset.id;
+    n.addEventListener("mouseenter", function(){ setHover(id, true); });
+    n.addEventListener("mouseleave", function(){ setHover(id, false); });
+    n.addEventListener("click", function(){ selectNode(id); });
+    n.addEventListener("keydown", function(ev){
+      if (ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); selectNode(id); }
+    });
+  });
+</script>
+</body>
+</html>
